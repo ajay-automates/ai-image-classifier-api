@@ -1,29 +1,52 @@
-# AI Image Classifier API
+<div align="center">
 
-**Self-hosted model inference pipeline. No external API calls. Zero cost per request.**
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=18,24,30&height=170&section=header&text=AI%20Image%20Classifier&fontSize=48&fontAlignY=35&animation=twinkling&fontColor=ffffff&desc=Self-Hosted%20CLIP%20Inference%20%7C%20%240%20Per%20Request&descAlignY=55&descSize=18" width="100%" />
 
-Upload any image. Get instant classification. The model (OpenAI CLIP) runs inside the container.
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](.)
+[![CLIP](https://img.shields.io/badge/OpenAI-CLIP-412991?style=for-the-badge&logo=openai&logoColor=white)](.)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)](.)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](.)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Deployed-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](.)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**Author:** Ajay Kumar Reddy Nelavetla | February 2026
+**Upload any image. Get instant classification. The model runs inside your container — zero API costs.**
+
+[Endpoints](#endpoints) · [Architecture](#architecture) · [Quick Start](#run-locally) · [Cost Comparison](#cost-comparison)
+
+</div>
 
 ---
 
 ## Why This Exists
 
-Most AI projects call external APIs (OpenAI, Claude, etc.) for every request. This project runs the model **locally** - no API keys, no per-request costs, no external dependencies.
+Most AI projects call external APIs (OpenAI, Claude, etc.) for every request. This project runs the model **locally** — no API keys, no per-request costs, no external dependencies.
 
 ```
-Typical AI app:  Your App ---> Claude API ---> Response (costs $0.003/req)
-This project:    Your App ---> YOUR Model ---> Response (costs $0/req)
+Typical AI app:  Your App ──→ Claude API ──→ Response (costs $0.003/req)
+This project:    Your App ──→ YOUR Model ──→ Response (costs $0/req)
 ```
 
 ---
 
-## Live Demo
+## Architecture
 
-**API:** Deployed on HuggingFace Spaces (Docker)
+```
+Client (curl / browser / app)
+        │
+        ▼
+FastAPI Server (uvicorn)
+        │
+        ▼
+CLIP Model (loaded in memory at startup)
+        │
+        ▼
+PyTorch Inference (CPU or GPU)
+        │
+        ▼
+JSON Response with predictions + confidence scores
+```
 
-**Docs:** `/docs` endpoint for interactive Swagger UI
+**Key design decisions:** Model loads ONCE at startup (not per-request). Model downloaded at Docker build time (fast cold starts). Zero external API calls during inference. Supports CPU and GPU automatically.
 
 ---
 
@@ -38,26 +61,8 @@ This project:    Your App ---> YOUR Model ---> Response (costs $0/req)
 | `GET` | `/metrics` | Request count and average latency |
 | `GET` | `/docs` | Interactive Swagger UI |
 
----
+### Example Response
 
-## Quick Test
-
-```bash
-# Classify an image
-curl -X POST "http://localhost:7860/classify" \
-  -F "file=@photo.jpg"
-
-# Classify with custom labels
-curl -X POST "http://localhost:7860/classify/custom?labels=product,lifestyle,meme" \
-  -F "file=@photo.jpg"
-
-# Batch classify
-curl -X POST "http://localhost:7860/classify/batch" \
-  -F "files=@photo1.jpg" \
-  -F "files=@photo2.jpg"
-```
-
-**Response:**
 ```json
 {
   "top_prediction": "dog",
@@ -72,33 +77,6 @@ curl -X POST "http://localhost:7860/classify/batch" \
   "model": "openai/clip-vit-base-patch32"
 }
 ```
-
----
-
-## Architecture
-
-```
-Client (curl/browser/app)
-        |
-        v
-FastAPI Server (uvicorn)
-        |
-        v
-CLIP Model (loaded in memory at startup)
-        |
-        v
-PyTorch Inference (CPU or GPU)
-        |
-        v
-JSON Response with predictions
-```
-
-Key design decisions:
-- Model loads ONCE at startup (not per-request)
-- Model downloaded at Docker build time (fast cold starts)
-- Zero external API calls during inference
-- Supports CPU and GPU automatically
-- Batch inference for throughput
 
 ---
 
@@ -119,25 +97,11 @@ docker build -t image-classifier .
 docker run -p 7860:7860 image-classifier
 ```
 
----
+### Deploy on HuggingFace Spaces (Free)
 
-## Deploy on HuggingFace Spaces (Free)
-
-1. Create a new Space at huggingface.co/new-space
-2. Select Docker as the SDK
-3. Connect your GitHub repo
-4. Deploy - Dockerfile handles everything
-
----
-
-## Model: OpenAI CLIP
-
-CLIP (Contrastive Language-Image Pre-training) understands both images and text. It classifies images into ANY text description without fine-tuning.
-
-- Zero-shot: No training needed for new categories
-- Model size: ~600MB
-- Inference: ~50ms on GPU, ~200ms on CPU
-- Categories: Unlimited (defined at query time)
+1. Create a new Space → select Docker SDK
+2. Connect your GitHub repo
+3. Deploy — Dockerfile handles everything
 
 ---
 
@@ -145,15 +109,15 @@ CLIP (Contrastive Language-Image Pre-training) understands both images and text.
 
 | Feature | Implementation |
 |---------|---------------|
-| Model Serving | FastAPI + uvicorn |
-| Containerization | Docker with model pre-download |
-| Health Checks | `/health` endpoint |
-| Metrics | `/metrics` - request count, avg latency |
-| Batch Inference | `/classify/batch` - up to 10 images |
-| Zero-shot | Custom labels at query time |
-| Auto GPU/CPU | Detects CUDA automatically |
-| CORS | Enabled for frontend integration |
-| API Docs | Swagger UI at `/docs` |
+| **Model Serving** | FastAPI + uvicorn |
+| **Containerization** | Docker with model pre-download |
+| **Health Checks** | `/health` endpoint |
+| **Metrics** | `/metrics` — request count, avg latency |
+| **Batch Inference** | `/classify/batch` — up to 10 images |
+| **Zero-shot** | Custom labels at query time — no retraining |
+| **Auto GPU/CPU** | Detects CUDA automatically |
+| **CORS** | Enabled for frontend integration |
+| **API Docs** | Swagger UI at `/docs` |
 
 ---
 
@@ -167,7 +131,7 @@ CLIP (Contrastive Language-Image Pre-training) understands both images and text.
 
 ---
 
-## Technologies
+## Tech Stack
 
 `FastAPI` `PyTorch` `CLIP` `Transformers` `Docker` `Uvicorn` `HuggingFace` `Model Serving` `MLOps`
 
@@ -175,8 +139,20 @@ CLIP (Contrastive Language-Image Pre-training) understands both images and text.
 
 ## Related Projects
 
-- [Resume Analyzer (QLoRA)](https://github.com/ajay-automates/advanced-resume-analyzer-qlora)
-- [AI Code Review Bot](https://github.com/ajay-automates/ai-code-review-bot)
-- [AI Support Agent](https://github.com/ajay-automates/ai-support-agent)
+| Project | Description |
+|---------|-------------|
+| [Resume Analyzer (QLoRA)](https://github.com/ajay-automates/advanced-resume-analyzer-qlora) | Fine-tuned Gemma 3 4B for resume-job fit |
+| [AI Code Review Bot](https://github.com/ajay-automates/ai-code-review-bot) | Automated PR reviews via Claude + GitHub Actions |
+| [AI Support Agent](https://github.com/ajay-automates/ai-support-agent) | RAG chatbot with LangSmith observability |
 
-*Built in February 2026*
+---
+
+<div align="center">
+
+**Built by [Ajay Kumar Reddy Nelavetla](https://github.com/ajay-automates)** · February 2026
+
+*Own your inference. Zero API costs. Self-hosted ML in production.*
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=18,24,30&height=100&section=footer" width="100%" />
+
+</div>
